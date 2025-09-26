@@ -2,65 +2,90 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Classement continuité écologique</title>
+  <title>Classement continuité écologique des cours d’eau</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
     html, body { height: 100%; margin: 0; }
     #map { width: 100%; height: 100%; }
+
+    /* HEADER style ikopowercto */
     .header {
       position: absolute;
       top: 10px; left: 50%; transform: translateX(-50%);
-      z-index:1000; background:white; padding:10px 20px;
-      border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.3);
-      font-family:sans-serif; text-align:center;
+      z-index: 1000;
+      background: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
-    .header h1 { margin:0; font-size:18px; color:#2c3e50; }
-    .header p { margin:5px 0 0 0; font-size:13px; color:#555; }
+    .header img {
+      height: 36px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+      color: #2c3e50;
+    }
+    .leaflet-popup-content {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
+  <!-- Bandeau -->
   <div class="header">
-    <h1>Classement des cours d’eau</h1>
-    <p>Cliquer sur un segment pour voir : Classement, Code Sandre, Longueur</p>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Logo"/>
+    <h1>Classement continuité écologique</h1>
   </div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Initialisation carte
+    // Init carte centrée sur France métropolitaine
     var map = L.map('map').setView([46.5, 2], 6);
+
+    // Fond OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom:18,
-      attribution:"© OpenStreetMap"
+      maxZoom: 18,
+      attribution: "© OpenStreetMap"
     }).addTo(map);
 
-    // URL WFS du Sandre (ici Métropole, listes 1 et 2)
+    // URL WFS (Segments de classement continuité écologique Liste 1 et 2 - Métropole)
     const url = "https://services.sandre.eaufrance.fr/geo/zppn?service=WFS&version=2.0.0&request=GetFeature&typenames=sa:SegClassContinuiteEco_FXX&outputFormat=application/json";
 
-    // Style des segments selon la Liste
+    // Style des segments par classement
     function styleCours(feature) {
-      let liste = feature.properties.liste;  // champ à vérifier !
+      let liste = feature.properties.liste;
       return {
         color: liste === "1" ? "green" : "orange",
         weight: 3
       };
     }
 
-    // Popup enrichi
+    // Popup : infos tronçon
     function popupCours(feature, layer) {
       let p = feature.properties;
-      // >>> Pour vérifier les champs exacts disponibles:
-      console.log("Attributs tronçon:", p);
+      // Vérification console des champs disponibles (utile pour debug)
+      console.log("Tronçon :", p);
 
-      layer.bindPopup(
-        "<b>" + (p.nom_cours_eau || "Cours inconnu") + "</b><br/>" +
-        "Classement : Liste " + (p.liste || "?") + "<br/>" +
-        "Code Sandre : " + (p.cdtroncon || "-") + "<br/>" +
-        "Longueur : " + (p.longueur ? (p.longueur + " m") : "NR")
-      );
+      // Construction du contenu popup
+      let contenu = `
+        <b>${p.lb_cours || "Cours d’eau inconnu"}</b><br/>
+        Classement : <b>Liste ${p.liste || "?"}</b><br/>
+        Code Sandre tronçon : <code>${p.cdtroncon || "-"}</code><br/>
+        Longueur : ${p.longueur ? (p.longueur + " m") : "Non renseignée"}
+      `;
+
+      layer.bindPopup(contenu);
     }
 
-    // Charger GeoJSON depuis Sandre
+    // Charger les données Sandre
     fetch(url)
       .then(r => r.json())
       .then(data => {
