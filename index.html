@@ -8,7 +8,7 @@
     html, body { height: 100%; margin: 0; }
     #map { width: 100%; height: 100%; }
 
-    /* HEADER style ikopowercto */
+    /* Header style */
     .header {
       position: absolute;
       top: 10px; left: 50%; transform: translateX(-50%);
@@ -30,10 +30,32 @@
       font-size: 18px;
       color: #2c3e50;
     }
+
     .leaflet-popup-content {
       font-family: Arial, sans-serif;
       font-size: 13px;
       line-height: 1.5;
+    }
+
+    /* Légende en bas à droite */
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      color: #333;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .legend i {
+      width: 14px;
+      height: 14px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.8;
     }
   </style>
 </head>
@@ -43,23 +65,34 @@
     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Logo"/>
     <h1>Classement continuité écologique</h1>
   </div>
+
+  <!-- Carte -->
   <div id="map"></div>
+
+  <!-- Légende -->
+  <div class="legend">
+    <div><i style="background:green"></i> Liste 1</div>
+    <div><i style="background:orange"></i> Liste 2</div>
+  </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Init carte centrée sur France métropolitaine
+    // Init carte
     var map = L.map('map').setView([46.5, 2], 6);
 
-    // Fond OpenStreetMap
+    // Fond
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: "© OpenStreetMap"
     }).addTo(map);
 
-    // URL WFS (Segments de classement continuité écologique Liste 1 et 2 - Métropole)
-    const url = "https://services.sandre.eaufrance.fr/geo/zppn?service=WFS&version=2.0.0&request=GetFeature&typenames=sa:SegClassContinuiteEco_FXX&outputFormat=application/json";
+    // URL WFS Sandre (France métropolitaine)
+    const url = "https://services.sandre.eaufrance.fr/geo/zppn?" +
+                "service=WFS&version=2.0.0&request=GetFeature&" +
+                "typenames=sa:SegClassContinuiteEco_FXX&" +
+                "outputFormat=application/json%3B%20subtype=geojson";
 
-    // Style des segments par classement
+    // Style des segments
     function styleCours(feature) {
       let liste = feature.properties.liste;
       return {
@@ -68,32 +101,29 @@
       };
     }
 
-    // Popup : infos tronçon
+    // Popup
     function popupCours(feature, layer) {
       let p = feature.properties;
-      // Vérification console des champs disponibles (utile pour debug)
-      console.log("Tronçon :", p);
-
-      // Construction du contenu popup
       let contenu = `
         <b>${p.lb_cours || "Cours d’eau inconnu"}</b><br/>
         Classement : <b>Liste ${p.liste || "?"}</b><br/>
         Code Sandre tronçon : <code>${p.cdtroncon || "-"}</code><br/>
         Longueur : ${p.longueur ? (p.longueur + " m") : "Non renseignée"}
       `;
-
       layer.bindPopup(contenu);
     }
 
-    // Charger les données Sandre
+    // Chargement depuis WFS
     fetch(url)
       .then(r => r.json())
       .then(data => {
+        console.log("Exemple attributs d'un tronçon :", data.features[0].properties);
         L.geoJSON(data, {
           style: styleCours,
           onEachFeature: popupCours
         }).addTo(map);
-      });
+      })
+      .catch(err => console.error("Erreur de chargement WFS Sandre :", err));
   </script>
 </body>
 </html>
