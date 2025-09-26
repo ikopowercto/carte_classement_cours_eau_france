@@ -22,10 +22,15 @@
       align-items: center;
       gap: 12px;
     }
-    .header img { height: 36px; }
-    .header h1 { margin: 0; font-size: 18px; color: #2c3e50; }
+    .header img {
+      height: 36px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+      color: #2c3e50;
+    }
 
-    /* Popup */
     .leaflet-popup-content {
       font-family: Arial, sans-serif;
       font-size: 13px;
@@ -34,34 +39,23 @@
 
     /* Légende */
     .legend {
-      position: absolute; bottom: 20px; right: 20px;
-      background: white; padding: 8px 12px;
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      padding: 8px 12px;
       border-radius: 6px;
       font-family: Arial, sans-serif;
-      font-size: 13px; color: #333;
+      font-size: 13px;
+      color: #333;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
     .legend i {
-      width: 14px; height: 14px;
-      float: left; margin-right: 8px;
+      width: 14px;
+      height: 14px;
+      float: left;
+      margin-right: 8px;
       opacity: 0.8;
-    }
-
-    /* Interface utilisateur */
-    #ui {
-      position: absolute;
-      top: 70px; left: 10px;
-      z-index: 1100;
-      background: white;
-      padding: 10px;
-      border-radius: 6px;
-      font-family: Arial, sans-serif;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
-    #ui select, #ui button {
-      margin-top: 5px;
-      padding: 5px;
-      font-size: 13px;
     }
   </style>
 </head>
@@ -81,97 +75,70 @@
     <div><i style="background:orange"></i> Liste 2</div>
   </div>
 
-  <!-- Interface choix département -->
-  <div id="ui">
-    <label for="dept">Département : </label><br/>
-    <select id="dept">
-      <option value="">-- Sélectionner --</option>
-      <option value="75">75 - Paris</option>
-      <option value="21">21 - Côte-d’Or</option>
-      <option value="89">89 - Yonne</option>
-      <option value="69">69 - Rhône</option>
-      <option value="13">13 - Bouches-du-Rhône</option>
-      <option value="33">33 - Gironde</option>
-      <option value="59">59 - Nord</option>
-      <option value="06">06 - Alpes-Maritimes</option>
-      <option value="92">92 - Hauts-de-Seine</option>
-    </select><br/>
-    <button id="charger">Charger</button>
-  </div>
-
-  <!-- Scripts -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Initialisation de la carte
+    // Initialisation carte
     var map = L.map('map').setView([46.5, 2], 6);
+
+    // Fond
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: "© OpenStreetMap"
     }).addTo(map);
 
-    let currentLayer; // couche active
+    // URL WFS Sandre (Métropole list1+2)
+    const url = "https://services.sandre.eaufrance.fr/geo/zppn?" +
+                "service=WFS&version=2.0.0&request=GetFeature&" +
+                "typenames=sa:SegClassContinuiteEco_FXX&" +
+                "outputFormat=application/json%3B%20subtype=geojson";
 
-    // Fonction utilitaire pour extraire un champ donné dans CommentClassContinuiteEco
-    function extraireChamp(comment, champ) {
-      if (!comment) return null;
-      let regex = new RegExp(champ + "\\s*:\\s*([^;]+)", "i");
-      let match = comment.match(regex);
-      return match ? match[1].trim() : null;
-    }
-
-    // Fonction de style
+    // Style des cours d'eau selon liste
     function styleCours(feature) {
       let liste = feature.properties.ListeClassement;
-      return { color: liste === "1" ? "green" : "orange", weight: 2 };
+      return {
+        color: liste === "1" ? "green" : "orange",
+        weight: 2
+      };
     }
 
-    // Popup info
+    // Extraire le code tronçon depuis CommentClassContinuiteEco
+    function extraireCode(comment) {
+      if (!comment) return "non renseigné";
+      // capture tout après "Cours d'eau:" ou "Cours d’eau:" jusqu'au premier ";"
+      let match = comment.match(/Cours d['’]eau:\s*([^;]+)/i);
+      if (!match) return "non renseigné";
+      let brut = match[1];
+      return brut; // brut, conservé tel quel
+    }
+
+    // Popup pour chaque segment
     function popupCours(feature, layer) {
       let p = feature.properties;
-      let codeTroncon = extraireChamp(p.CommentClassContinuiteEco, "Code Cours d['’]eau");
-      let nomCours   = extraireChamp(p.CommentClassContinuiteEco, "Libellé cours d['’]eau");
+
+      console.log("Commentaire brut:", p.CommentClassContinuiteEco);
+
+      let codeTroncon = extraireCode(p.CommentClassContinuiteEco);
 
       let contenu = `
-        <b>${nomCours || "Nom non trouvé"}</b><br/>
+        <b>${p.lb_cours || "Cours d’eau inconnu"}</b><br/>
         Classement : <b>Liste ${p.ListeClassement || "?"}</b><br/>
-        Code Sandre : <code>${codeTroncon || "Non renseigné"}</code>
+        Code Sandre tronçon : <code>${codeTroncon}</code><br/>
+        Longueur : ${p.longueur ? (p.longueur + " m") : "Non renseignée"}
       `;
       layer.bindPopup(contenu);
     }
 
-    // Bouton "Charger"
-    document.getElementById("charger").addEventListener("click", () => {
-      let dept = document.getElementById("dept").value;
-      if (!dept) { alert("Choisissez un département !"); return; }
-
-      // NB : si CQL_FILTER ne fonctionne pas avec ce serveur,
-      // tu pourras passer par un BBOX approximatif du département
-      const url = "https://services.sandre.eaufrance.fr/geo/zppn?" +
-                  "service=WFS&version=2.0.0&request=GetFeature&" +
-                  "typenames=sa:SegClassContinuiteEco_FXX&" +
-                  "outputFormat=application/json%3B%20subtype=geojson&" +
-                  "CQL_FILTER=Departement='" + dept + "'";
-
-      console.log("Chargement données pour département:", dept);
-
-      fetch(url)
-        .then(r => r.json())
-        .then(data => {
-          if (currentLayer) map.removeLayer(currentLayer);
-
-          currentLayer = L.geoJSON(data, {
-            style: styleCours,
-            onEachFeature: popupCours
-          }).addTo(map);
-
-          if (data.features.length) {
-            map.fitBounds(currentLayer.getBounds());
-          } else {
-            alert("Aucune donnée trouvée pour ce département (" + dept + ")");
-          }
-        })
-        .catch(err => console.error("Erreur chargement:", err));
-    });
+    // Charger données
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        console.log("Exemple attributs tronçon :", data.features[0].properties);
+        L.geoJSON(data, {
+          style: styleCours,
+          onEachFeature: popupCours
+        }).addTo(map);
+      })
+      .catch(err => console.error("Erreur WFS Sandre :", err));
   </script>
 </body>
 </html>
