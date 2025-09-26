@@ -92,22 +92,34 @@
                 "typenames=sa:SegClassContinuiteEco_FXX&" +
                 "outputFormat=application/json%3B%20subtype=geojson";
 
-    // Style des segments
+    // Style des segments (ListeClassement)
     function styleCours(feature) {
-      let liste = feature.properties.liste;
+      let liste = feature.properties.ListeClassement;
       return {
         color: liste === "1" ? "green" : "orange",
-        weight: 3
+        weight: 2
       };
+    }
+
+    // Fonction pour extraire le Code Sandre depuis CommentClassContinuiteEco
+    function extraireCode(comment) {
+      if (!comment) return "-";
+      // cherche "Cours d'eau: " puis prend jusqu'à l'espace suivant
+      let match = comment.match(/Cours d'eau:\s*([A-Z0-9]+)/);
+      return match ? match[1] : "-";
     }
 
     // Popup
     function popupCours(feature, layer) {
       let p = feature.properties;
+
+      // Extraire le code SANDRE
+      let codeTroncon = extraireCode(p.CommentClassContinuiteEco);
+
       let contenu = `
         <b>${p.lb_cours || "Cours d’eau inconnu"}</b><br/>
-        Classement : <b>Liste ${p.liste || "?"}</b><br/>
-        Code Sandre tronçon : <code>${p.cdtroncon || "-"}</code><br/>
+        Classement : <b>Liste ${p.ListeClassement || "?"}</b><br/>
+        Code Sandre tronçon : <code>${codeTroncon}</code><br/>
         Longueur : ${p.longueur ? (p.longueur + " m") : "Non renseignée"}
       `;
       layer.bindPopup(contenu);
@@ -117,7 +129,7 @@
     fetch(url)
       .then(r => r.json())
       .then(data => {
-        console.log("Exemple attributs d'un tronçon :", data.features[0].properties);
+        console.log("Attributs disponibles d’un tronçon:", data.features[0].properties);
         L.geoJSON(data, {
           style: styleCours,
           onEachFeature: popupCours
