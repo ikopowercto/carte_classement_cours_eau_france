@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Classement continuité écologique des cours d’eau</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- 👈 essentiel mobile -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
@@ -12,20 +13,18 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
       background: #f8f9fa;
+      min-height: 100vh;
     }
 
-    /* HEADER avec logo + titre + instructions */
+    /* HEADER */
     .header {
       text-align: center;
-      margin: 20px;
+      margin: 20px 10px;
     }
     .header img {
       height: 70px;
-      display: block;
-      margin: 0 auto 10px auto;
+      max-width: 90%;
     }
     .header h1 {
       margin: 0;
@@ -38,11 +37,12 @@
       margin-top: 5px;
     }
 
-    /* Carte au milieu de la page, responsive */
+    /* Carte responsive */
     #map {
-      width: 90%;
+      width: 95%;
       max-width: 1000px;
       height: 500px;
+      min-height: 300px;
       border: 2px solid #ccc;
       border-radius: 6px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.15);
@@ -53,37 +53,33 @@
     .legend {
       position: absolute;
       bottom: 50px;
-      right: 30px;
+      right: 10px;
       background: white;
       padding: 6px 10px;
       border-radius: 4px;
       font-size: 13px;
-      color: #333;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
     .legend i {
-      width: 14px;
-      height: 14px;
-      float: left;
+      width: 14px; height: 14px;
+      display: inline-block;
       margin-right: 6px;
       opacity: 0.8;
     }
 
-    /* Message de chargement avec spinner */
+    /* Message de chargement */
     #message {
       margin: 10px;
       padding: 8px 12px;
       border-radius: 4px;
       font-size: 14px;
-      background: #fff8dc;
       border: 1px solid #f0e68c;
-      color: #555;
+      background: #fff8dc;
       display: flex;
       align-items: center;
       gap: 10px;
+      max-width: 95%;
     }
-
-    /* Loader animé */
     .loader {
       border: 3px solid #f3f3f3;
       border-top: 3px solid #555;
@@ -92,9 +88,9 @@
       height: 14px;
       animation: spin 1s linear infinite;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    @keyframes spin { 
+      0% { transform: rotate(0deg); } 
+      100% { transform: rotate(360deg); } 
     }
 
     /* Footer */
@@ -109,18 +105,34 @@
       text-align: center;
       border-top: 1px solid #ccc;
     }
+
+    /* -------- Media Queries pour petit écran -------- */
+    @media (max-width: 768px) {
+      .header img { height: 50px; }
+      .header h1 { font-size: 18px; }
+      .header p { font-size: 12px; }
+      #map { height: 60vh; } /* carte plus haute sur mobile */
+      #message { font-size: 12px; }
+    }
+
+    @media (max-width: 480px) {
+      .header img { height: 40px; }
+      .header h1 { font-size: 16px; }
+      .header p { font-size: 11px; }
+      #map { height: 65vh; } /* encore plus haut sur petits mobiles */
+    }
   </style>
 </head>
 
 <body>
-  <!-- En-tête -->
+  <!-- Header -->
   <div class="header">
     <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png" alt="Logo IKO Power"/>
     <h1>Carte interactive • Classement continuité écologique</h1>
     <p>Cliquez sur un tronçon pour savoir s’il est classé en Liste 1 ou Liste 2</p>
   </div>
 
-  <!-- Message utilisateur -->
+  <!-- Message chargement -->
   <div id="message">
     <div class="loader"></div>
     <span>⏳ Chargement des données depuis le serveur Sandre…</span>
@@ -143,47 +155,34 @@
   <!-- Scripts -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Initialisation carte
     var map = L.map('map').setView([46.5, 2], 6);
 
-    // Fond de carte OSM
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: "© OpenStreetMap"
     }).addTo(map);
 
-    // URL WFS Sandre (Métropole list1+2)
     const url = "https://services.sandre.eaufrance.fr/geo/zppn?" +
                 "service=WFS&version=2.0.0&request=GetFeature&" +
                 "typenames=sa:SegClassContinuiteEco_FXX&" +
                 "outputFormat=application/json%3B%20subtype=geojson";
 
-    // Style des cours d'eau selon ListeClassement
     function styleCours(feature) {
       let liste = feature.properties.ListeClassement;
-      return {
-        color: liste === "1" ? "green" : "orange",
-        weight: 2
-      };
+      return { color: liste === "1" ? "green" : "orange", weight: 2 };
     }
 
-    // Popup : uniquement Liste 1 / 2
     function popupCours(feature, layer) {
       let liste = feature.properties.ListeClassement;
       let contenu = `<b>Classement :</b> Liste ${liste || "?"}`;
       layer.bindPopup(contenu);
     }
 
-    // Charger données depuis Sandre
     fetch(url)
       .then(r => r.json())
       .then(data => {
-        L.geoJSON(data, {
-          style: styleCours,
-          onEachFeature: popupCours
-        }).addTo(map);
+        L.geoJSON(data, { style: styleCours, onEachFeature: popupCours }).addTo(map);
 
-        // Maj message de succès et retirer loader
         let msg = document.getElementById("message");
         msg.innerHTML = "✅ Données chargées depuis le serveur Sandre";
         msg.style.background = "#e6ffe6";
@@ -191,7 +190,7 @@
         msg.style.color = "darkgreen";
       })
       .catch(err => {
-        console.error("Erreur de chargement WFS Sandre :", err);
+        console.error("Erreur chargement WFS Sandre :", err);
         let msg = document.getElementById("message");
         msg.innerHTML = "⚠️ Erreur lors du chargement des données Sandre";
         msg.style.background = "#ffe6e6";
