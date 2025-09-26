@@ -2,129 +2,73 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Classement des cours d'eau - Continuité écologique</title>
+  <title>Classement continuité écologique</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-    /* Bandeau flottant style sobre */
+    html, body { height: 100%; margin: 0; }
+    #map { width: 100%; height: 100%; }
     .header {
       position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      background: white;
-      padding: 10px 20px;
-      border-radius: 6px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      font-family: sans-serif;
-      text-align: center;
+      top: 10px; left: 50%; transform: translateX(-50%);
+      z-index:1000; background:white; padding:10px 20px;
+      border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.3);
+      font-family:sans-serif; text-align:center;
     }
-    .header h1 {
-      margin: 0;
-      font-size: 18px;
-      color: #2c3e50;
-    }
-    .header p {
-      margin: 5px 0 0 0;
-      font-size: 13px;
-      color: #555;
-    }
+    .header h1 { margin:0; font-size:18px; color:#2c3e50; }
+    .header p { margin:5px 0 0 0; font-size:13px; color:#555; }
   </style>
 </head>
 <body>
   <div class="header">
     <h1>Classement des cours d’eau</h1>
-    <p>Cliquer sur un cours pour voir : Classement, Code Sandre, Longueur</p>
+    <p>Cliquer sur un segment pour voir : Classement, Code Sandre, Longueur</p>
   </div>
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // 1. Initialisation carte
-    var map = L.map('map').setView([46.5, 2], 6); // centrée sur la France
-
-    // 2. Fond de carte
+    // Initialisation carte
+    var map = L.map('map').setView([46.5, 2], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 18,
-      attribution: "© OpenStreetMap"
+      maxZoom:18,
+      attribution:"© OpenStreetMap"
     }).addTo(map);
 
-    // 3. Exemple de données factices (à remplacer par fetch() → API Sandre)
-    var exemples = {
-      "type": "FeatureCollection",
-      "features": [
-        {
-          "type":"Feature",
-          "properties":{
-            "nom_cours_eau":"La Loire",
-            "liste":"1",
-            "cdtroncon":"H1234560",
-            "longueur":13250
-          },
-          "geometry":{
-            "type":"LineString",
-            "coordinates":[[2.0,47.2],[2.1,47.3]]
-          }
-        },
-        {
-          "type":"Feature",
-          "properties":{
-            "nom_cours_eau":"La Seine",
-            "liste":"2",
-            "cdtroncon":"H9876543",
-            "longueur":8600
-          },
-          "geometry":{
-            "type":"LineString",
-            "coordinates":[[2.3,48.8],[2.4,48.9]]
-          }
-        }
-      ]
-    };
+    // URL WFS du Sandre (ici Métropole, listes 1 et 2)
+    const url = "https://services.sandre.eaufrance.fr/geo/zppn?service=WFS&version=2.0.0&request=GetFeature&typenames=sa:SegClassContinuiteEco_FXX&outputFormat=application/json";
 
-    // 4. Style par liste
+    // Style des segments selon la Liste
     function styleCours(feature) {
+      let liste = feature.properties.liste;  // champ à vérifier !
       return {
-        color: feature.properties.liste === "1" ? "green" : "orange",
-        weight: 4
+        color: liste === "1" ? "green" : "orange",
+        weight: 3
       };
     }
 
-    // 5. Popup enrichi
+    // Popup enrichi
     function popupCours(feature, layer) {
-      if (feature.properties) {
-        let p = feature.properties;
-        layer.bindPopup(
-          "<b>" + (p.nom_cours_eau || "Cours d’eau inconnu") + "</b><br/>" +
-          "Classement : Liste " + (p.liste || "NC") + "<br/>" +
-          "Code Sandre : <code>" + (p.cdtroncon || "-") + "</code><br/>" +
-          "Longueur : " + (p.longueur ? (p.longueur + " m") : "non renseignée")
-        );
-      }
+      let p = feature.properties;
+      // >>> Pour vérifier les champs exacts disponibles:
+      console.log("Attributs tronçon:", p);
+
+      layer.bindPopup(
+        "<b>" + (p.nom_cours_eau || "Cours inconnu") + "</b><br/>" +
+        "Classement : Liste " + (p.liste || "?") + "<br/>" +
+        "Code Sandre : " + (p.cdtroncon || "-") + "<br/>" +
+        "Longueur : " + (p.longueur ? (p.longueur + " m") : "NR")
+      );
     }
 
-    // 6. Ajouter données sur la carte
-    L.geoJSON(exemples, {
-      style: styleCours,
-      onEachFeature: popupCours
-    }).addTo(map);
-
-    // Exemple d’intégration du vrai flux (remplacer URL)
-    /*
-    fetch("https://services.sandre.eaufrance.fr/.....&outputFormat=application/json")
+    // Charger GeoJSON depuis Sandre
+    fetch(url)
       .then(r => r.json())
       .then(data => {
-        L.geoJSON(data, { style: styleCours, onEachFeature: popupCours }).addTo(map);
+        L.geoJSON(data, {
+          style: styleCours,
+          onEachFeature: popupCours
+        }).addTo(map);
       });
-    */
   </script>
 </body>
 </html>
