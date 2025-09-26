@@ -62,7 +62,7 @@
 <body>
   <!-- Bandeau -->
   <div class="header">
-    <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png" alt="Logo"/>
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Logo"/>
     <h1>Classement continuité écologique</h1>
   </div>
 
@@ -77,7 +77,7 @@
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Init carte
+    // Initialisation carte
     var map = L.map('map').setView([46.5, 2], 6);
 
     // Fond
@@ -86,13 +86,13 @@
       attribution: "© OpenStreetMap"
     }).addTo(map);
 
-    // URL WFS Sandre (Métropole listes 1+2)
+    // URL WFS Sandre (Métropole list1+2)
     const url = "https://services.sandre.eaufrance.fr/geo/zppn?" +
                 "service=WFS&version=2.0.0&request=GetFeature&" +
                 "typenames=sa:SegClassContinuiteEco_FXX&" +
                 "outputFormat=application/json%3B%20subtype=geojson";
 
-    // Style
+    // Style des cours d'eau selon liste
     function styleCours(feature) {
       let liste = feature.properties.ListeClassement;
       return {
@@ -101,16 +101,22 @@
       };
     }
 
-    // EXTRACTION : brut jusqu'au premier ";"
+    // Extraire le code tronçon depuis CommentClassContinuiteEco
     function extraireCode(comment) {
-      if (!comment) return "-";
-      let match = comment.match(/Cours d'eau:\s*([^;]+)/);
-      return match ? match[1] : "-";
+      if (!comment) return "non renseigné";
+      // capture tout après "Cours d'eau:" ou "Cours d’eau:" jusqu'au premier ";"
+      let match = comment.match(/Cours d['’]eau:\s*([^;]+)/i);
+      if (!match) return "non renseigné";
+      let brut = match[1];
+      return brut; // brut, conservé tel quel
     }
 
-    // Popup
+    // Popup pour chaque segment
     function popupCours(feature, layer) {
       let p = feature.properties;
+
+      console.log("Commentaire brut:", p.CommentClassContinuiteEco);
+
       let codeTroncon = extraireCode(p.CommentClassContinuiteEco);
 
       let contenu = `
@@ -126,7 +132,7 @@
     fetch(url)
       .then(r => r.json())
       .then(data => {
-        console.log("Attributs d’un tronçon exemple :", data.features[0].properties);
+        console.log("Exemple attributs tronçon :", data.features[0].properties);
         L.geoJSON(data, {
           style: styleCours,
           onEachFeature: popupCours
