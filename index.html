@@ -8,6 +8,7 @@
     html, body { height: 100%; margin: 0; }
     #map { width: 100%; height: 100%; }
 
+    /* Header style */
     .header {
       position: absolute;
       top: 10px; left: 50%; transform: translateX(-50%);
@@ -21,8 +22,14 @@
       align-items: center;
       gap: 12px;
     }
-    .header img { height: 36px; }
-    .header h1 { margin: 0; font-size: 18px; color: #2c3e50; }
+    .header img {
+      height: 36px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+      color: #2c3e50;
+    }
 
     .leaflet-popup-content {
       font-family: Arial, sans-serif;
@@ -30,29 +37,39 @@
       line-height: 1.5;
     }
 
+    /* Légende */
     .legend {
-      position: absolute; bottom: 20px; right: 20px;
-      background: white; padding: 8px 12px;
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      padding: 8px 12px;
       border-radius: 6px;
       font-family: Arial, sans-serif;
-      font-size: 13px; color: #333;
+      font-size: 13px;
+      color: #333;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
     .legend i {
-      width: 14px; height: 14px;
-      float: left; margin-right: 8px;
+      width: 14px;
+      height: 14px;
+      float: left;
+      margin-right: 8px;
       opacity: 0.8;
     }
   </style>
 </head>
 <body>
+  <!-- Bandeau -->
   <div class="header">
     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Logo"/>
     <h1>Classement continuité écologique</h1>
   </div>
 
+  <!-- Carte -->
   <div id="map"></div>
 
+  <!-- Légende -->
   <div class="legend">
     <div><i style="background:green"></i> Liste 1</div>
     <div><i style="background:orange"></i> Liste 2</div>
@@ -60,18 +77,22 @@
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
+    // Initialisation carte
     var map = L.map('map').setView([46.5, 2], 6);
 
+    // Fond
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: "© OpenStreetMap"
     }).addTo(map);
 
+    // URL WFS Sandre (Métropole list1+2)
     const url = "https://services.sandre.eaufrance.fr/geo/zppn?" +
                 "service=WFS&version=2.0.0&request=GetFeature&" +
                 "typenames=sa:SegClassContinuiteEco_FXX&" +
                 "outputFormat=application/json%3B%20subtype=geojson";
 
+    // Style des cours d'eau selon liste
     function styleCours(feature) {
       let liste = feature.properties.ListeClassement;
       return {
@@ -80,38 +101,42 @@
       };
     }
 
-    function extraireChamp(comment, champ) {
+    // Extraire le code tronçon depuis CommentClassContinuiteEco
+    function extraireCode(comment) {
       if (!comment) return "non renseigné";
-      let texte = comment.replace(/\n/g, " ");
-      let regex = new RegExp(champ + "\\s*:\\s*([^;]+)", "i");
-      let match = texte.match(regex);
-      return match ? match[1].trim() : "non trouvé";
+      // capture tout après "Cours d'eau:" ou "Cours d’eau:" jusqu'au premier ";"
+      let match = comment.match(/Cours d['’]eau:\s*([^;]+)/i);
+      if (!match) return "non renseigné";
+      let brut = match[1];
+      return brut; // brut, conservé tel quel
     }
 
+    // Popup pour chaque segment
     function popupCours(feature, layer) {
       let p = feature.properties;
 
       console.log("Commentaire brut:", p.CommentClassContinuiteEco);
 
-      let codeTroncon = extraireChamp(p.CommentClassContinuiteEco, "Code Cours d['’]eau");
-      let nomCours   = extraireChamp(p.CommentClassContinuiteEco, "Libellé cours d['’]eau");
+      let codeTroncon = extraireCode(p.CommentClassContinuiteEco);
 
       let contenu = `
-        <b>${nomCours}</b><br/>
+        <b>${p.lb_cours || "Cours d’eau inconnu"}</b><br/>
         Classement : <b>Liste ${p.ListeClassement || "?"}</b><br/>
         Code Sandre tronçon : <code>${codeTroncon}</code><br/>
-        Longueur : ${p.longueur ? (p.longueur + " m") : "Non renseignée"}<br/>
-        <small style="color:#666">Source: Commentaire brut</small>
+        Longueur : ${p.longueur ? (p.longueur + " m") : "Non renseignée"}
       `;
-
       layer.bindPopup(contenu);
     }
 
+    // Charger données
     fetch(url)
       .then(r => r.json())
       .then(data => {
-        console.log("Attributs exemple :", data.features[0].properties);
-        L.geoJSON(data, { style: styleCours, onEachFeature: popupCours }).addTo(map);
+        console.log("Exemple attributs tronçon :", data.features[0].properties);
+        L.geoJSON(data, {
+          style: styleCours,
+          onEachFeature: popupCours
+        }).addTo(map);
       })
       .catch(err => console.error("Erreur WFS Sandre :", err));
   </script>
