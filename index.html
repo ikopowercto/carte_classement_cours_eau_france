@@ -37,7 +37,7 @@
       line-height: 1.5;
     }
 
-    /* Légende en bas à droite */
+    /* Légende */
     .legend {
       position: absolute;
       bottom: 20px;
@@ -62,7 +62,7 @@
 <body>
   <!-- Bandeau -->
   <div class="header">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Water_drop_icon.svg/1024px-Water_drop_icon.svg.png" alt="Logo"/>
+    <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png" alt="Logo"/>
     <h1>Classement continuité écologique</h1>
   </div>
 
@@ -86,13 +86,13 @@
       attribution: "© OpenStreetMap"
     }).addTo(map);
 
-    // URL WFS Sandre (France métropolitaine)
+    // URL WFS Sandre (Métropole listes 1+2)
     const url = "https://services.sandre.eaufrance.fr/geo/zppn?" +
                 "service=WFS&version=2.0.0&request=GetFeature&" +
                 "typenames=sa:SegClassContinuiteEco_FXX&" +
                 "outputFormat=application/json%3B%20subtype=geojson";
 
-    // Style des segments (ListeClassement)
+    // Style
     function styleCours(feature) {
       let liste = feature.properties.ListeClassement;
       return {
@@ -101,19 +101,16 @@
       };
     }
 
-    // Fonction pour extraire le Code Sandre depuis CommentClassContinuiteEco
+    // EXTRACTION : brut jusqu'au premier ";"
     function extraireCode(comment) {
       if (!comment) return "-";
-      // cherche "Cours d'eau: " puis prend jusqu'à l'espace suivant
-      let match = comment.match(/Cours d'eau:\s*([A-Z0-9]+)/);
+      let match = comment.match(/Cours d'eau:\s*([^;]+)/);
       return match ? match[1] : "-";
     }
 
     // Popup
     function popupCours(feature, layer) {
       let p = feature.properties;
-
-      // Extraire le code SANDRE
       let codeTroncon = extraireCode(p.CommentClassContinuiteEco);
 
       let contenu = `
@@ -125,17 +122,17 @@
       layer.bindPopup(contenu);
     }
 
-    // Chargement depuis WFS
+    // Charger données
     fetch(url)
       .then(r => r.json())
       .then(data => {
-        console.log("Attributs disponibles d’un tronçon:", data.features[0].properties);
+        console.log("Attributs d’un tronçon exemple :", data.features[0].properties);
         L.geoJSON(data, {
           style: styleCours,
           onEachFeature: popupCours
         }).addTo(map);
       })
-      .catch(err => console.error("Erreur de chargement WFS Sandre :", err));
+      .catch(err => console.error("Erreur WFS Sandre :", err));
   </script>
 </body>
 </html>
