@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Classement continuité écologique des cours d’eau</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/> <!-- Mobile-friendly -->
+  <meta name="viewport" content="width=device-width, initial-scale=1"/> 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
@@ -12,13 +12,13 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      overflow: hidden; /* empêche le curseur */
+      overflow: hidden; /* empêche la scrollbar */
       font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
     }
 
-    /* Header toujours en haut */
+    /* Header */
     .header {
       text-align: center;
       padding: 8px;
@@ -42,27 +42,35 @@
       margin: 4px 0 0 0;
     }
 
-    /* Zone centrale flexible */
+    /* Zone centrale (carte) */
     .main {
       flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
       background: #f8f9fa;
     }
 
-    /* Message de chargement */
-    #message {
-      margin: 5px;
-      padding: 6px 10px;
+    #map {
+      flex: 1;
+      width: 100%;
+      position: relative; /* nécessaire pour overlays */
+    }
+
+    /* Overlay message chargement */
+    .map-message {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff8dc;
+      border: 1px solid #f0e68c;
+      padding: 6px 12px;
       border-radius: 4px;
       font-size: 13px;
-      border: 1px solid #f0e68c;
-      background: #fff8dc;
       display: flex;
       align-items: center;
       gap: 8px;
+      z-index: 1200;
     }
     .loader {
       border: 2px solid #f3f3f3;
@@ -77,22 +85,17 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* Carte occupe tout l’espace restant */
-    #map {
-      flex: 1;
-      width: 100%;
-    }
-
-    /* Légende */
+    /* Overlay légende */
     .legend {
       position: absolute;
-      bottom: 50px;
+      bottom: 10px;
       right: 10px;
       background: white;
       padding: 6px 10px;
       border-radius: 4px;
       font-size: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      z-index: 1200;
     }
     .legend i {
       width: 14px;
@@ -102,7 +105,7 @@
       opacity: 0.8;
     }
 
-    /* Footer toujours visible en bas */
+    /* Footer */
     footer {
       padding: 6px;
       font-size: 12px;
@@ -119,7 +122,7 @@
       .header img { height: 40px; }
       .header h1 { font-size: 16px; }
       .header p { font-size: 11px; }
-      #message { font-size: 12px; }
+      .map-message { font-size: 11px; }
     }
   </style>
 </head>
@@ -132,21 +135,21 @@
     <p>Cliquez sur un tronçon pour savoir s’il est classé en Liste 1 ou Liste 2</p>
   </div>
 
-  <!-- Zone centrale -->
+  <!-- Carte -->
   <div class="main">
-    <!-- Message chargement -->
-    <div id="message">
-      <div class="loader"></div>
-      <span>⏳ Chargement des données depuis le serveur Sandre…</span>
-    </div>
-    <!-- Carte -->
-    <div id="map"></div>
-  </div>
+    <div id="map">
+      <!-- Message overlay -->
+      <div id="message" class="map-message">
+        <div class="loader"></div>
+        <span>⏳ Chargement des données depuis le serveur Sandre…</span>
+      </div>
 
-  <!-- Légende -->
-  <div class="legend">
-    <div><i style="background:green"></i> Liste 1</div>
-    <div><i style="background:orange"></i> Liste 2</div>
+      <!-- Légende overlay -->
+      <div class="legend">
+        <div><i style="background:green"></i> Liste 1</div>
+        <div><i style="background:orange"></i> Liste 2</div>
+      </div>
+    </div>
   </div>
 
   <!-- Footer -->
@@ -185,6 +188,7 @@
       .then(data => {
         L.geoJSON(data, { style: styleCours, onEachFeature: popupCours }).addTo(map);
 
+        // Mise à jour du message (succès)
         let msg = document.getElementById("message");
         msg.innerHTML = "✅ Données chargées depuis le serveur Sandre";
         msg.style.background = "#e6ffe6";
