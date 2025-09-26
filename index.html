@@ -80,12 +80,12 @@
       };
     }
 
-    // Fonction générique d'extraction
     function extraireChamp(comment, champ) {
       if (!comment) return "non renseigné";
+      let texte = comment.replace(/\n/g, " ");
       let regex = new RegExp(champ + "\\s*:\\s*([^;]+)", "i");
-      let match = comment.match(regex);
-      return match ? match[1].trim() : "non renseigné";
+      let match = texte.match(regex);
+      return match ? match[1].trim() : "non trouvé";
     }
 
     function popupCours(feature, layer) {
@@ -93,14 +93,15 @@
 
       console.log("Commentaire brut:", p.CommentClassContinuiteEco);
 
-      let codeTroncon = extraireChamp(p.CommentClassContinuiteEco, "Code Cours d'eau");
-      let nomCours   = extraireChamp(p.CommentClassContinuiteEco, "Libellé cours d'eau");
+      let codeTroncon = extraireChamp(p.CommentClassContinuiteEco, "Code Cours d['’]eau");
+      let nomCours   = extraireChamp(p.CommentClassContinuiteEco, "Libellé cours d['’]eau");
 
       let contenu = `
         <b>${nomCours}</b><br/>
         Classement : <b>Liste ${p.ListeClassement || "?"}</b><br/>
         Code Sandre tronçon : <code>${codeTroncon}</code><br/>
-        Longueur : ${p.longueur ? (p.longueur + " m") : "Non renseignée"}
+        Longueur : ${p.longueur ? (p.longueur + " m") : "Non renseignée"}<br/>
+        <small style="color:#666">Source: Commentaire brut</small>
       `;
 
       layer.bindPopup(contenu);
@@ -109,7 +110,7 @@
     fetch(url)
       .then(r => r.json())
       .then(data => {
-        console.log("Attributs tronçon exemple :", data.features[0].properties);
+        console.log("Attributs exemple :", data.features[0].properties);
         L.geoJSON(data, { style: styleCours, onEachFeature: popupCours }).addTo(map);
       })
       .catch(err => console.error("Erreur WFS Sandre :", err));
