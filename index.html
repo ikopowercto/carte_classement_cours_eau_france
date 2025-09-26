@@ -3,50 +3,84 @@
 <head>
   <meta charset="utf-8" />
   <title>Classement continuité écologique des cours d’eau</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"> <!-- 👈 essentiel mobile -->
+  <meta name="viewport" content="width=device-width, initial-scale=1"/> <!-- Mobile-friendly -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
   <style>
-    body {
+    /* Page plein écran sans scroll */
+    html, body {
       margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden; /* empêche le curseur */
       font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      background: #f8f9fa;
-      min-height: 100vh;
     }
 
-    /* HEADER */
+    /* Header toujours en haut */
     .header {
       text-align: center;
-      margin: 20px 10px;
+      padding: 8px;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      z-index: 1000;
     }
     .header img {
-      height: 70px;
-      max-width: 90%;
+      height: 50px;
+      display: block;
+      margin: 0 auto 5px auto;
     }
     .header h1 {
       margin: 0;
-      font-size: 22px;
+      font-size: 18px;
       color: #2c3e50;
     }
     .header p {
-      font-size: 14px;
+      font-size: 13px;
       color: #555;
-      margin-top: 5px;
+      margin: 4px 0 0 0;
     }
 
-    /* Carte responsive */
+    /* Zone centrale flexible */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      background: #f8f9fa;
+    }
+
+    /* Message de chargement */
+    #message {
+      margin: 5px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      border: 1px solid #f0e68c;
+      background: #fff8dc;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .loader {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #555;
+      border-radius: 50%;
+      width: 12px;
+      height: 12px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Carte occupe tout l’espace restant */
     #map {
-      width: 95%;
-      max-width: 1000px;
-      height: 500px;
-      min-height: 300px;
-      border: 2px solid #ccc;
-      border-radius: 6px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-      margin-bottom: 15px;
+      flex: 1;
+      width: 100%;
     }
 
     /* Légende */
@@ -57,47 +91,21 @@
       background: white;
       padding: 6px 10px;
       border-radius: 4px;
-      font-size: 13px;
+      font-size: 12px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.3);
     }
     .legend i {
-      width: 14px; height: 14px;
+      width: 14px;
+      height: 14px;
       display: inline-block;
       margin-right: 6px;
       opacity: 0.8;
     }
 
-    /* Message de chargement */
-    #message {
-      margin: 10px;
-      padding: 8px 12px;
-      border-radius: 4px;
-      font-size: 14px;
-      border: 1px solid #f0e68c;
-      background: #fff8dc;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      max-width: 95%;
-    }
-    .loader {
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #555;
-      border-radius: 50%;
-      width: 14px;
-      height: 14px;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin { 
-      0% { transform: rotate(0deg); } 
-      100% { transform: rotate(360deg); } 
-    }
-
-    /* Footer */
+    /* Footer toujours visible en bas */
     footer {
-      margin-top: auto;
-      padding: 12px 0;
-      font-size: 13px;
+      padding: 6px;
+      font-size: 12px;
       font-weight: bold;
       color: #444;
       background: #eee;
@@ -106,20 +114,12 @@
       border-top: 1px solid #ccc;
     }
 
-    /* -------- Media Queries pour petit écran -------- */
-    @media (max-width: 768px) {
-      .header img { height: 50px; }
-      .header h1 { font-size: 18px; }
-      .header p { font-size: 12px; }
-      #map { height: 60vh; } /* carte plus haute sur mobile */
-      #message { font-size: 12px; }
-    }
-
-    @media (max-width: 480px) {
+    /* Responsive petit écran */
+    @media (max-width: 600px) {
       .header img { height: 40px; }
       .header h1 { font-size: 16px; }
       .header p { font-size: 11px; }
-      #map { height: 65vh; } /* encore plus haut sur petits mobiles */
+      #message { font-size: 12px; }
     }
   </style>
 </head>
@@ -132,14 +132,16 @@
     <p>Cliquez sur un tronçon pour savoir s’il est classé en Liste 1 ou Liste 2</p>
   </div>
 
-  <!-- Message chargement -->
-  <div id="message">
-    <div class="loader"></div>
-    <span>⏳ Chargement des données depuis le serveur Sandre…</span>
+  <!-- Zone centrale -->
+  <div class="main">
+    <!-- Message chargement -->
+    <div id="message">
+      <div class="loader"></div>
+      <span>⏳ Chargement des données depuis le serveur Sandre…</span>
+    </div>
+    <!-- Carte -->
+    <div id="map"></div>
   </div>
-
-  <!-- Carte -->
-  <div id="map"></div>
 
   <!-- Légende -->
   <div class="legend">
@@ -190,7 +192,7 @@
         msg.style.color = "darkgreen";
       })
       .catch(err => {
-        console.error("Erreur chargement WFS Sandre :", err);
+        console.error("Erreur de chargement WFS Sandre :", err);
         let msg = document.getElementById("message");
         msg.innerHTML = "⚠️ Erreur lors du chargement des données Sandre";
         msg.style.background = "#ffe6e6";
