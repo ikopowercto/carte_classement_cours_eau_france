@@ -6,19 +6,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/> 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    html, body {margin:0; padding:0; height:100%; overflow:hidden; font-family:Arial, sans-serif; display:flex; flex-direction:column;}
-    .header {text-align:center; padding:8px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.1);}
-    .header img {height:50px; display:block; margin:0 auto 5px auto;}
-    .header h1 {margin:0; font-size:18px; color:#2c3e50;}
-    .header p {font-size:13px; color:#555; margin:4px 0 0 0;}
-    .main {flex:1; display:flex; flex-direction:column; background:#f8f9fa;}
-    #map {flex:1; width:100%; position:relative;}
-    .map-message {position:absolute; top:10px; left:50%; transform:translateX(-50%); background:#fff8dc; border:1px solid #f0e68c; padding:6px 12px; border-radius:4px; font-size:13px; display:flex; align-items:center; gap:8px; z-index:1200;}
-    .loader {border:2px solid #f3f3f3; border-top:2px solid #555; border-radius:50%; width:12px; height:12px; animation:spin 1s linear infinite;}
+    html, body {
+      margin:0; padding:0; height:100%;
+      overflow:hidden;
+      font-family:Arial, sans-serif;
+      display:flex;
+      flex-direction:column;
+    }
+    .header {
+      text-align:center;
+      padding:8px;
+      background:#fff;
+      box-shadow:0 2px 6px rgba(0,0,0,0.1);
+      z-index:1000;
+    }
+    .header img { height:50px; display:block; margin:0 auto 5px auto; }
+    .header h1 { margin:0; font-size:18px; color:#2c3e50;}
+    .header p { font-size:13px; color:#555; margin:4px 0 0 0;}
+    .main { flex:1; display:flex; flex-direction:column; background:#f8f9fa; }
+    #map { flex:1; width:100%; position:relative; }
+    .map-message {
+      position:absolute; top:10px; left:50%; transform:translateX(-50%);
+      background:#fff8dc; border:1px solid #f0e68c;
+      padding:6px 12px; border-radius:4px;
+      font-size:13px; display:flex;
+      align-items:center; gap:8px;
+      z-index:1200;
+    }
+    .loader { border:2px solid #f3f3f3; border-top:2px solid #555; border-radius:50%; width:12px; height:12px; animation:spin 1s linear infinite;}
     @keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
-    .legend {position:absolute; bottom:10px; right:10px; background:white; padding:6px 10px; border-radius:4px; font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,0.3); z-index:1200;}
-    .legend i {width:14px; height:14px; display:inline-block; margin-right:6px; opacity:0.8;}
-    footer {padding:6px; font-size:12px; font-weight:bold; color:#444; background:#eee; width:100%; text-align:center; border-top:1px solid #ccc;}
+    .legend {
+      position:absolute; bottom:10px; right:10px;
+      background:white; padding:6px 10px;
+      border-radius:4px; font-size:12px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.3);
+      z-index:1200;
+    }
+    .legend i {
+      width:14px; height:14px;
+      display:inline-block; margin-right:6px; opacity:0.8;
+    }
+    footer {
+      padding:6px; font-size:12px; font-weight:bold;
+      color:#444; background:#eee;
+      width:100%; text-align:center;
+      border-top:1px solid #ccc;
+    }
+    @media(max-width:600px){
+      .header img{height:40px;}
+      .header h1{font-size:16px;}
+      .header p{font-size:11px;}
+      .map-message{font-size:11px;}
+    }
   </style>
 </head>
 <body>
@@ -26,7 +65,7 @@
   <div class="header">
     <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png" alt="Logo IKO Power"/>
     <h1>Carte interactive • Classement continuité écologique</h1>
-    <p>Cliquez sur un tronçon pour voir son classement et le cours d’eau associé</p>
+    <p>Cliquez sur un tronçon pour voir son classement, le segment et le cours d’eau</p>
   </div>
 
   <!-- Carte -->
@@ -54,14 +93,16 @@
       maxZoom:18, attribution:"© OpenStreetMap"
     }).addTo(map);
 
+    // WFS Classements continuité (segments Liste1/2)
     const urlZPPN = "https://services.sandre.eaufrance.fr/geo/zppn?" +
                     "service=WFS&version=2.0.0&request=GetFeature&" +
                     "typenames=sa:SegClassContinuiteEco_FXX&" +
                     "outputFormat=application/json%3B%20subtype=geojson";
 
+    // Service eth avec tronçons hydro = code/nom
     const urlETH = "https://services.sandre.eaufrance.fr/geo/eth";
 
-    // Fonction pour élargir la BBOX de 0.002° (~200m)
+    // BBOX élargie pour capter le tronçon
     function expandBBOX(bbox, padding=0.002) {
       let parts = bbox.split(",").map(parseFloat);
       let minX = parts[0] - padding;
@@ -90,11 +131,10 @@
       `;
       layer.bindPopup(contenu);
 
-      // Lors de l'ouverture → interroger ETH
       layer.on("popupopen", () => {
         let bbox = expandBBOX(layer.getBounds().toBBoxString(), 0.002);
         let url = urlETH + "?service=WFS&version=2.0.0&request=GetFeature&" +
-                  "typenames=sa:EntiteHydrographique&" +
+                  "typenames=sa:TronconHydrograElt&" +   // ✅ bonne couche
                   "srsName=EPSG:4326&bbox=" + bbox + ",EPSG:4326&" +
                   "outputFormat=application/json%3B%20subtype=geojson";
 
@@ -111,7 +151,7 @@
             }
           })
           .catch(err => {
-            console.error("Erreur ETH", err);
+            console.error("Erreur ETH:", err);
             document.getElementById(popupId+"-code").innerText = "erreur";
             document.getElementById(popupId+"-nom").innerText = "erreur";
           });
@@ -124,17 +164,13 @@
         L.geoJSON(data, { style: styleCours, onEachFeature: popupCours }).addTo(map);
         let msg = document.getElementById("message");
         msg.innerHTML = "✅ Données chargées depuis le serveur Sandre";
-        msg.style.background = "#e6ffe6";
-        msg.style.border = "1px solid #7cfc00";
-        msg.style.color = "darkgreen";
+        msg.style.background = "#e6ffe6"; msg.style.border = "1px solid #7cfc00"; msg.style.color = "darkgreen";
       })
       .catch(err => {
         console.error("Erreur WFS Sandre :", err);
         let msg = document.getElementById("message");
         msg.innerHTML = "⚠️ Erreur lors du chargement des données Sandre";
-        msg.style.background = "#ffe6e6";
-        msg.style.border = "1px solid #ff4d4d";
-        msg.style.color = "darkred";
+        msg.style.background = "#ffe6e6"; msg.style.border = "1px solid #ff4d4d"; msg.style.color = "darkred";
       });
   </script>
 </body>
