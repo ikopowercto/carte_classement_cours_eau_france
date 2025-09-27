@@ -93,16 +93,16 @@
       maxZoom:18, attribution:"© OpenStreetMap"
     }).addTo(map);
 
-    // WFS Classements continuité (segments Liste1/2)
+    // WFS ZPPN (Segments classés Liste1/2)
     const urlZPPN = "https://services.sandre.eaufrance.fr/geo/zppn?" +
                     "service=WFS&version=2.0.0&request=GetFeature&" +
                     "typenames=sa:SegClassContinuiteEco_FXX&" +
                     "outputFormat=application/json%3B%20subtype=geojson";
 
-    // Service eth avec tronçons hydro = code/nom
+    // Service ETH (CoursEau)
     const urlETH = "https://services.sandre.eaufrance.fr/geo/eth";
 
-    // BBOX élargie pour capter le tronçon
+    // Fonction pour élargir légèrement la BBOX
     function expandBBOX(bbox, padding=0.002) {
       let parts = bbox.split(",").map(parseFloat);
       let minX = parts[0] - padding;
@@ -134,7 +134,7 @@
       layer.on("popupopen", () => {
         let bbox = expandBBOX(layer.getBounds().toBBoxString(), 0.002);
         let url = urlETH + "?service=WFS&version=2.0.0&request=GetFeature&" +
-                  "typenames=sa:TronconHydrograElt&" +   // ✅ bonne couche
+                  "typenames=sa:CoursEau&" +  // ✅ Bonne couche ETH
                   "srsName=EPSG:4326&bbox=" + bbox + ",EPSG:4326&" +
                   "outputFormat=application/json%3B%20subtype=geojson";
 
@@ -143,8 +143,10 @@
           .then(data => {
             if (data.features.length > 0) {
               let f = data.features[0].properties;
-              document.getElementById(popupId+"-code").innerText = f.CdEntiteHydrographique || "non trouvé";
-              document.getElementById(popupId+"-nom").innerText = f.NomEntiteHydrographique || "non trouvé";
+              document.getElementById(popupId+"-code").innerText =
+                f.CdEntiteHydrographique || "non trouvé";
+              document.getElementById(popupId+"-nom").innerText =
+                f.NomEntiteHydrographique || "non trouvé";
             } else {
               document.getElementById(popupId+"-code").innerText = "non trouvé";
               document.getElementById(popupId+"-nom").innerText = "non trouvé";
@@ -158,6 +160,7 @@
       });
     }
 
+    // Charger la couche ZPPN (classement éco)
     fetch(urlZPPN)
       .then(r => r.json())
       .then(data => {
