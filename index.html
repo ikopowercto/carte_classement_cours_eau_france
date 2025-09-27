@@ -2,116 +2,51 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Carte interactive • Continuité écologique + Cours d’eau</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Carte interactive • Classement continuité écologique</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/> 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    html, body {margin:0; padding:0; height:100%; font-family:Arial, sans-serif; display:flex; flex-direction:column;}
-    .header {text-align:center; padding:10px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.15); z-index:1000;}
-    .header img {height:50px; display:block; margin:0 auto 5px auto;}
-    .header h1 {margin:0; font-size:18px; color:#2c3e50;}
-    .header p {font-size:13px; color:#555; margin:4px 0;}
-    #departement-select {margin-top:8px; padding:5px; font-size:13px;}
-    #map {flex:1; width:100%;}
+    html, body {margin:0; padding:0; height:100%; display:flex; flex-direction:column; font-family:Arial, sans-serif;}
+    .header {text-align:center; padding:10px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+    .header img {height:50px; margin:0 auto 8px;}
+    #map {flex:1; width:100%; position:relative;}
+    .map-message {position:absolute; top:10px; left:50%; transform:translateX(-50%); background:#fff8dc;
+      border:1px solid #f0e68c; padding:6px 12px; border-radius:4px; z-index:1200;}
     .legend {position:absolute; bottom:10px; right:10px; background:white; padding:6px 10px; border-radius:4px; font-size:12px;
       box-shadow:0 2px 6px rgba(0,0,0,0.3); z-index:1200;}
-    .legend i {width:14px; height:14px; display:inline-block; margin-right:6px; opacity:0.8;}
-    footer {padding:6px; font-size:12px; font-weight:bold; color:#444; background:#eee; width:100%; text-align:center; border-top:1px solid #ccc;}
+    .legend i{width:14px;height:14px;display:inline-block;margin-right:6px;}
+    footer {text-align:center; padding:6px; font-size:12px; background:#eee; border-top:1px solid #ccc;}
   </style>
 </head>
 <body>
-  <!-- Header -->
   <div class="header">
     <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png" alt="Logo IKO Power"/>
-    <h1>Carte interactive • Cours d’eau & Classement continuité</h1>
-    <p>Sélectionnez un département pour afficher les cours d’eau et leur classement (Liste 1 ou 2).</p>
-    <select id="departement-select">
-      <option value="">-- Choisir un département --</option>
-      <option value="21">21 - Côte-d’Or</option>
-      <option value="33">33 - Gironde</option>
-      <option value="75">75 - Paris</option>
-      <option value="69">69 - Rhône</option>
-      <option value="89">89 - Yonne</option>
-      <!-- ajouter d’autres si besoin -->
-    </select>
+    <h1>Carte interactive • Classement continuité écologique</h1>
+    <p>Cliquez sur un segment pour afficher son classement (Liste 1/2) et son code segment.</p>
   </div>
-
-  <!-- Carte -->
-  <div id="map"></div>
-  <div class="legend">
-    <div><i style="background:blue"></i> Cours d’eau (ETH)</div>
-    <div><i style="background:green"></i> Liste 1 (classement)</div>
-    <div><i style="background:orange"></i> Liste 2 (classement)</div>
+  <div id="map">
+    <div id="message" class="map-message">⏳ Chargement des données...</div>
+    <div class="legend">
+      <div><i style="background:green"></i> Liste 1</div>
+      <div><i style="background:orange"></i> Liste 2</div>
+    </div>
   </div>
-
-  <!-- Footer -->
   <footer>© 2025 IKO Power • Carte interactive client</footer>
-
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    // Initialiser carte
-    var map = L.map('map').setView([46.5,2], 6);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18, attribution:"© OpenStreetMap"}).addTo(map);
-
-    // Groupes pour pouvoir effacer/recharger
-    let layerCoursEau=null, layerClassement=null;
-
-    // Dictionnaire des BBOX par département (exemple simplifié). Format: code->[bbox,minX,minY,maxX,maxY],zoom
-    const departementsBbox={
-      "21": {bbox:"4.5,47,5.5,47.8,EPSG:4326", center:[47.3,5.1], zoom:9},
-      "33": {bbox:"-1.5,44.25,-0.2,45.3,EPSG:4326", center:[44.8,-0.6], zoom:9},
-      "75": {bbox:"2.2,48.7,2.5,48.9,EPSG:4326", center:[48.85,2.35], zoom:11},
-      "69": {bbox:"4.5,45.6,5,46.1,EPSG:4326", center:[45.8,4.8], zoom:9},
-      "89": {bbox:"2.9,47.6,3.8,48.3,EPSG:4326", center:[47.9,3.3], zoom:9}
-    };
-
-    // Styles
-    function styleETH(){return {color:"blue", weight:1, opacity:0.6};}
-    function styleZPPN(f){return {color:(f.properties.ListeClassement==="1"?"green":"orange"), weight:3};}
-
-    // Popups
-    function popupETH(f,l){
-      let p=f.properties;
-      l.bindPopup(`<b>Code :</b> ${p.CdEntiteHydrographique||"?"}<br/>
-                   <b>Nom :</b> ${p.NomEntiteHydrographique||"?"}`);
-    }
-    function popupZPPN(f,l){
+    var map = L.map('map').setView([46.5, 2], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
+    const urlZPPN="https://services.sandre.eaufrance.fr/geo/zppn?service=WFS&version=2.0.0&request=GetFeature&typenames=sa:SegClassContinuiteEco_FXX&outputFormat=application/json%3B%20subtype=geojson";
+    function style(f){return {color:f.properties.ListeClassement==="1"?"green":"orange", weight:2};}
+    function popup(f,l){
       l.bindPopup(`<b>Classement :</b> Liste ${f.properties.ListeClassement||"?"}<br/>
-                   <b>Code segment (CodeNatZone) :</b> ${f.properties.CodeNatZone||"?"}`);
+                   <b>Code segment :</b> ${f.properties.CodeNatZone||"?"}`);
     }
-
-    // Sélecteur département
-    document.getElementById("departement-select").addEventListener("change", function(){
-      let code=this.value;
-      if(!code){return;}
-      let info=departementsBbox[code];
-      if(!info){alert("Département non encore configuré");return;}
-
-      // Supprimer couches existantes
-      if(layerCoursEau){map.removeLayer(layerCoursEau);}
-      if(layerClassement){map.removeLayer(layerClassement);}
-
-      // URL ETH
-      let urlETH="https://services.sandre.eaufrance.fr/geo/eth?service=WFS&version=2.0.0&request=GetFeature&"+
-                 "typenames=sa:CoursEau&srsName=EPSG:4326&bbox="+info.bbox+
-                 "&outputFormat=application/json%3B%20subtype=geojson";
-      // URL ZPPN
-      let urlZPPN="https://services.sandre.eaufrance.fr/geo/zppn?service=WFS&version=2.0.0&request=GetFeature&"+
-                  "typenames=sa:SegClassContinuiteEco_FXX&srsName=EPSG:4326&bbox="+info.bbox+
-                  "&outputFormat=application/json%3B%20subtype=geojson";
-
-      // Charger ETH
-      fetch(urlETH).then(r=>r.json()).then(data=>{
-        layerCoursEau=L.geoJSON(data,{style:styleETH,onEachFeature:popupETH}).addTo(map);
-      }).catch(e=>console.error("Erreur ETH",e));
-
-      // Charger ZPPN
-      fetch(urlZPPN).then(r=>r.json()).then(data=>{
-        layerClassement=L.geoJSON(data,{style:styleZPPN,onEachFeature:popupZPPN}).addTo(map).bringToFront();
-      }).catch(e=>console.error("Erreur ZPPN",e));
-
-      // Recentrer carte
-      map.setView(info.center,info.zoom);
+    fetch(urlZPPN).then(r=>r.json()).then(data=>{
+      L.geoJSON(data,{style:style,onEachFeature:popup}).addTo(map);
+      document.getElementById("message").innerHTML="✅ Données chargées";
+    }).catch(e=>{
+      document.getElementById("message").innerHTML="⚠️ Erreur de chargement";
     });
   </script>
 </body>
