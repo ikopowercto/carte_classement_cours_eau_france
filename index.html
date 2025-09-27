@@ -28,6 +28,34 @@
     .header img { height:55px; margin-bottom:8px;}
     .header h1 { margin:0; font-size:22px; color:#2c3e50;}
     .header p { margin:5px 0 10px; font-size:14px; color:#666;}
+    /* Barre de saisie coordonnées */
+    .coords-form {
+      display:flex; justify-content:center; align-items:center; gap:10px;
+      margin-top:6px;
+    }
+    .coords-form input {
+      padding:8px 12px;
+      font-size:14px;
+      border:1px solid #ccc;
+      border-radius:4px;
+      width:220px;
+      transition:border .2s;
+    }
+    .coords-form input:focus {
+      border-color: var(--primary);
+      outline:none;
+    }
+    .coords-form button {
+      background: var(--primary);
+      color:white;
+      border:none;
+      border-radius:4px;
+      padding:8px 16px;
+      font-size:14px;
+      cursor:pointer;
+      transition: background .2s;
+    }
+    .coords-form button:hover { background:#005fa3; }
     /* Carte avec style dashboard */
     #map {
       flex:1; margin:15px auto; width:92%;
@@ -69,6 +97,10 @@
     <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png" alt="Logo IKO Power"/>
     <h1>Carte interactive • Classement continuité écologique</h1>
     <p>Cliquez sur un segment pour afficher son classement (Liste 1/2) et son code segment</p>
+    <div class="coords-form">
+      <input type="text" id="coords" placeholder="Ex: 48.85, 2.35">
+      <button onclick="goToCoords()">Aller</button>
+    </div>
   </div>
 
   <!-- CARTE -->
@@ -111,6 +143,18 @@
       msg.innerHTML="⚠️ Erreur de chargement";
       msg.style.background="#ffe6e6"; msg.style.color="var(--error)";
     });
+
+    // Zoomer sur coordonnées
+    function goToCoords(){
+      let input=document.getElementById("coords").value.trim();
+      if(!input){ alert("Saisir coordonnées (lat, lon)"); return;}
+      let parts=input.split(/[,; ]+/);
+      if(parts.length<2){ alert("Format: lat, lon ex: 48.85, 2.35"); return;}
+      let lat=parseFloat(parts[0]), lon=parseFloat(parts[1]);
+      if(isNaN(lat)||isNaN(lon)){ alert("Coordonnées invalides"); return;}
+      map.setView([lat,lon], 12);
+      L.popup().setLatLng([lat,lon]).setContent("📍 Zoom ici").openOn(map);
+    }
   </script>
 </body>
 </html>
