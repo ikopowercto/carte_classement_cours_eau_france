@@ -6,47 +6,110 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/> 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
   <style>
-    html, body {margin:0; padding:0; height:100%; display:flex; flex-direction:column; font-family:Arial, sans-serif;}
-    .header {text-align:center; padding:10px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.15);}
-    .header img {height:50px; margin:0 auto 8px;}
-    #map {flex:1; width:100%; position:relative;}
-    .map-message {position:absolute; top:10px; left:50%; transform:translateX(-50%); background:#fff8dc;
-      border:1px solid #f0e68c; padding:6px 12px; border-radius:4px; z-index:1200;}
-    .legend {position:absolute; bottom:10px; right:10px; background:white; padding:6px 10px; border-radius:4px; font-size:12px;
-      box-shadow:0 2px 6px rgba(0,0,0,0.3); z-index:1200;}
-    .legend i{width:14px;height:14px;display:inline-block;margin-right:6px;}
-    footer {text-align:center; padding:6px; font-size:12px; background:#eee; border-top:1px solid #ccc;}
+    :root {
+      --primary: #0077cc;
+      --success: #28a745;
+      --error: #dc3545;
+      --light-bg: #f8f9fa;
+    }
+    html, body {
+      margin:0; padding:0; height:100%;
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      background: var(--light-bg);
+      display:flex; flex-direction:column;
+    }
+    /* HEADER moderne */
+    .header {
+      text-align:center;
+      background:white;
+      padding:15px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    }
+    .header img { height:55px; margin-bottom:8px;}
+    .header h1 { margin:0; font-size:22px; color:#2c3e50;}
+    .header p { margin:5px 0 10px; font-size:14px; color:#666;}
+    /* Carte avec style dashboard */
+    #map {
+      flex:1; margin:15px auto; width:92%;
+      border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.15);
+      position:relative;
+    }
+    /* Message overlay moderne */
+    #message {
+      position:absolute; top:15px; left:50%; transform:translateX(-50%);
+      background:white; border-radius:4px; padding:10px 14px;
+      font-size:14px; box-shadow:0 2px 8px rgba(0,0,0,0.2);
+      display:flex; align-items:center; gap:10px; z-index:1200;
+    }
+    .loader {
+      border:3px solid #f3f3f3; border-top:3px solid var(--primary);
+      border-radius:50%; width:14px; height:14px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+    /* Légende */
+    .legend {
+      position:absolute; bottom:15px; right:15px;
+      background:white; padding:6px 10px; border-radius:4px;
+      font-size:12px; box-shadow:0 2px 6px rgba(0,0,0,0.2);
+      z-index:1200;
+    }
+    .legend i {width:14px;height:14px;display:inline-block;margin-right:6px; opacity:0.8;}
+    /* Footer moderne */
+    footer {
+      text-align:center; background:white;
+      padding:8px; font-size:13px; color:#666;
+      border-top:1px solid #ddd;
+    }
   </style>
 </head>
 <body>
+  <!-- HEADER -->
   <div class="header">
     <img src="https://ikopower.fr/wp-content/uploads/2021/11/iko-power_logo_turbine-hydroelectrique.png" alt="Logo IKO Power"/>
     <h1>Carte interactive • Classement continuité écologique</h1>
-    <p>Cliquez sur un segment pour afficher son classement (Liste 1/2) et son code segment.</p>
+    <p>Cliquez sur un segment pour afficher son classement (Liste 1/2) et son code segment</p>
   </div>
+
+  <!-- CARTE -->
   <div id="map">
-    <div id="message" class="map-message">⏳ Chargement des données...</div>
+    <div id="message"><div class="loader"></div> ⏳ Chargement des données...</div>
     <div class="legend">
       <div><i style="background:green"></i> Liste 1</div>
       <div><i style="background:orange"></i> Liste 2</div>
     </div>
   </div>
+
+  <!-- FOOTER -->
   <footer>© 2025 IKO Power • Carte interactive client</footer>
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    var map = L.map('map').setView([46.5, 2], 6);
+    var map = L.map('map').setView([46.5,2], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
-    const urlZPPN="https://services.sandre.eaufrance.fr/geo/zppn?service=WFS&version=2.0.0&request=GetFeature&typenames=sa:SegClassContinuiteEco_FXX&outputFormat=application/json%3B%20subtype=geojson";
-    function style(f){return {color:f.properties.ListeClassement==="1"?"green":"orange", weight:2};}
+
+    const urlZPPN="https://services.sandre.eaufrance.fr/geo/zppn"+
+      "?service=WFS&version=2.0.0&request=GetFeature"+
+      "&typenames=sa:SegClassContinuiteEco_FXX"+
+      "&outputFormat=application/json%3B%20subtype=geojson";
+
+    function style(f){ return {color:f.properties.ListeClassement==="1"?"green":"orange", weight:2}; }
     function popup(f,l){
       l.bindPopup(`<b>Classement :</b> Liste ${f.properties.ListeClassement||"?"}<br/>
                    <b>Code segment :</b> ${f.properties.CodeNatZone||"?"}`);
     }
+
+    const msg=document.getElementById("message");
+
     fetch(urlZPPN).then(r=>r.json()).then(data=>{
       L.geoJSON(data,{style:style,onEachFeature:popup}).addTo(map);
-      document.getElementById("message").innerHTML="✅ Données chargées";
+      msg.innerHTML="✅ Données chargées";
+      msg.style.background="#e6ffe6"; msg.style.color="var(--success)";
+      setTimeout(()=>msg.style.display="none",3000);
     }).catch(e=>{
-      document.getElementById("message").innerHTML="⚠️ Erreur de chargement";
+      console.error("Erreur chargement:",e);
+      msg.innerHTML="⚠️ Erreur de chargement";
+      msg.style.background="#ffe6e6"; msg.style.color="var(--error)";
     });
   </script>
 </body>
